@@ -1,5 +1,8 @@
 # LAB1
 ---
+### ！！！踩坑
+我自闭了，终于发现给的上机课的pdf和MIT中要求的有所不同，建议查看英文原版或者助教翻译的另一个版本.......还是决定不要写到一个文档中了，以后分开写，每次做了多少写多少
+
 ## bootloader
 在所提供的jos操作系统中，Boot Loader的源程序是由一个叫做boot.S(boot/boot.S) 的 AT&T 汇编程序与一个叫做 main.c(boot/main.c) 的 C 程序组成的。
 
@@ -280,13 +283,85 @@ Trace into bootmain() in boot/main.c, and then into readsect(). Identify the exa
 确保你能回答以下几个问题：
 1. At what point does the processor start executing 32-bit code? What exactly causes the switch from 16- to 32-bit mode?\
 在什么位置，处理器开始执行32位的代码，究竟是什么导致从16位模式切换到32位？
+
 2. What is the last instruction of the boot loader executed, and what is the first instruction of the kernel it just loaded?\
 boot loader执行的最后一条指令是什么，加载进内核的第一条指令是什么？
+
 3. Where is the first instruction of the kernel?\
 内核中第一条指令的位置在哪？
+
 4. How does the boot loader decide how many sectors it must read in order to fetch the entire kernel from disk? Where does it find this information?\
 boot loader怎么样决定为了从磁盘中取得完整的内核代码，它有多少个扇区它必须要读？它是从哪里得到这个信息的？
 
+#### ANSWER:
+1. 
+- 在boot.S 文件中，通过seta20.1 和seta20.2两个汇编程序段，打开A20数据线，从16位模式切换到32位模式。指令：lgdt gdtdesc 加载了全局描述符表GDT，其中gdtdesc是一个保存了哪些GDT信息需要被存储的信息，格式为[gdt 大小][gdt 地址]。GDT中包括了空段，可执行代码段，可读段，和可写段，地址从0到4G。
+- 代码
+``` x86asm
+  movl    %cr0, %eax
+  orl     $CR0_PE_ON, %eax
+  movl    %eax, %cr0
+```
+设置了保护模式开启的flag(实模式工作在16位状态下，保护模式工作在32位状态下)
+
+- 
+```x86asm
+ljmp    $PROT_MODE_CSEG, $protcseg
+
+movw    $PROT_MODE_DSEG, %ax    # Our data segment selector
+movw    %ax, %ds                # -> DS: Data Segment
+movw    %ax, %es                # -> ES: Extra Segment
+movw    %ax, %fs                # -> FS
+movw    %ax, %gs                # -> GS
+movw    %ax, %ss                # -> SS: Stack Segment
+......
+```
+加载相应段，将处理器运行在32位中，并且加载地址到相应的代码段，数据段等等......
+
+2. 
+- 最后一条是
+```x86asm
+((void (*)(void)) (ELFHDR->e_entry))();     #main.c中代码  
+7d63:	ff 15 18 00 01 00    	call   *0x10018 #反汇编代码
+```
+可以发现，实际上0x10018的地址即为elfhdr->entry的地址。
+```c
+struct elfhdr {
+  uint magic;  // must equal ELF_MAGIC
+  uchar elf[12];
+  ushort type;
+  ushort machine;
+  uint version;
+  uint entry;  // 程序入口的虚拟地址
+  uint phoff;  // program header 表的位置偏移
+  uint shoff;
+  uint flags;
+  ushort ehsize;
+  ushort phentsize;
+  ushort phnum; //program header表中的入口数目
+  ushort shentsize;
+  ushort shnum;
+  ushort shstrndx;
+};
+```
+故我们可以采用以下指令，在gdb中找到加载进内核的第一条指令
+```bash
+(gdb)x/1w 0x10018
+(gdb)x/1i 0x0010000c
+```
+因而，也能找到相应的第三问的结果
+
+3. 
+- 内核本身即是一个elf文件，bootloader程序通过解析elf的格式来知道一共有多少个扇区要读。
+```c
+	ph = (struct Proghdr *) ((uint8_t *) ELFHDR + ELFHDR->e_phoff);
+	eph = ph + ELFHDR->e_phnum;
+	for (; ph < eph; ph++)
+		// p_pa is the load address of this segment (as well
+		// as the physical address)
+		readseg(ph->p_pa, ph->p_memsz, ph->p_offset);
+```
+主要是通过elfhdr 中的e_phoff和e_phnum来决定读取的扇区数量
 #### 操作过程
 ```bash
 cd lab1/src/lab1_1 
@@ -296,5 +371,34 @@ cd lab1/src/lab1_1
 gdb #进入gdb模式之后
 b *0x7c00
 c
+si 
 
 ```
+
+#### 连接地址与载入地址
+使用objdump -h obj/kern/kernel 命令查看elf文件时，要注意VMA和LMA的差别(连接地址与载入地址)
+
+### 练习3
+#### 问题：
+1. Explain the interface between printf.c and console.c. Specifically, what function does console.c export? How is this function used by printf.c?\
+解释printf.c和console.c之间的接口，特别是console.c输出了什么相关函数，这个函数是怎么被printf.c利用的。
+
+2. Explain the following from console.c:
+```c
+1 if (crt_pos >= CRT_SIZE) {
+2 int i;
+3 memcpy(crt_buf, crt_buf + CRT_COLS, (CRT_SIZE -CRT_COLS) * sizeof(uint16_t));
+4 for (i = CRT_SIZE - CRT_COLS; i < CRT_SIZE; i++)
+5 crt_buf[i] = 0x0700 | ' ';
+6 crt_pos -= CRT_COLS;
+7 }
+```
+解释console.c中下述代码
+
+3. We have omitted a small fragment of code - the code necessary to print octal numbers using patterns of the form "%o". Find and fill in this code fragment.\
+我们已经省略了一小段代码——利用符号"%o"来打印八进制字符的这一段，找出来并且填上去。
+
+#### 关于JOS的虚拟内存控制
+映射整个底部的 256MB 物理地址空间,即 0x0000000~0x0fffffff,到虚拟地址空间的 0xf0000000~0xffffffff。这也是为什么 JOS 内核被限制在只能使用 256MB 物理 内存。
+
+#### 函数调用关系
