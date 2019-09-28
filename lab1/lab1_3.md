@@ -163,16 +163,3 @@ main(int ac, char **av)
 可以看到，由于lgdtw执行的问题，导致后续的连接跳转操作发生错误，无法继续进行
 
 ## exercise 6
-首先需要明确，可以利用x/8x 0x00100000这一条gdb相关的指令来查看相应的内容；同时，BIOS 进入引导加载程序的那一刻，即执行到0x7c00处时；而到 bootloader 进入内核的那一点（查看obj/boot/boot.asm）中的代码，在0x7d49处，进入loader环节，然后在0x7d63环节，直接进入到kern。
-
-![boot_asm](https://github.com/leliyliu/figure_lib/blob/master/jos/lab1/12.png?raw=true)
-
-因此，对相应位置进行操作，查看到相应的结果以及指令:
-
-![7c00](https://github.com/leliyliu/figure_lib/blob/master/jos/lab1/13.png?raw=true)
-
-![7d63](https://github.com/leliyliu/figure_lib/blob/master/jos/lab1/14.png?raw=true)
-
-得到相应的指令为:
-
-![instructions](https://github.com/leliyliu/figure_lib/blob/master/jos/lab1/15.png?raw=true)
