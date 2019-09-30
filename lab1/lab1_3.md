@@ -80,3 +80,56 @@ if (crt_pos >= CRT_SIZE) {
 ## challenge
 
 ## exercise 9
+
+在kern/entry.S 中，完成了栈的初始化过程，具体指令如下所示：
+```x86asm
+relocated:
+
+	# Clear the frame pointer register (EBP)
+	# so that once we get into debugging C code,
+	# stack backtraces will be terminated properly.
+	movl	$0x0,%ebp			# nuke frame pointer
+
+	# Set the stack pointer
+	movl	$(bootstacktop),%esp
+
+	# now to C code
+	call	i386_init
+```
+查看编译后的结果(obj/kern/kernel.asm):
+
+![stack_init](https://github.com/leliyliu/figure_lib/blob/master/jos/lab1/25.png?raw=true)
+
+初始的精确位置在<font color=cyan>0xf0110000</font>，esp指向当前使用的堆栈的最低地址处（0xf0110000是最大地址，在当前进程下不能高于这个地址），push会使esp-4,pop会使esp+4 (32位模式下)。 x86 栈指针（esp寄存器）指向栈当前正在使用的最低地址位置
+
+## exercise 10
+根据所得到的相应结果，看到，在进行完相应的stack初始化之后，进入了init_386的函数调用，实际过程实际上有一个调用test_backtrace(5) 的过程:
+
+因此设置相应的断点，得到执行的过程为：
+
+![gdb_process](https://github.com/leliyliu/figure_lib/blob/master/jos/lab1/27.png?raw=true)
+
+![source_code](https://github.com/leliyliu/figure_lib/blob/master/jos/lab1/26.png?raw=true)
+
+根据相应的源码，可以看到，每一级的递归调用会压入0x14bytes，即5个32位的字，这些内容包括相关的参数和ebp每次调用时的值。
+
+
+## exercise 11
+添加代码如下：
+```c
+```
+
+## exercise 12
++ 在文件 <font color=red>kern/kernel.ld</font> 中查找 \_\_STAB_*
+![]()
+
++ 运行 <font color=red>objdump -h obj/kern/kernel</font>
+
+![]()
+
++ 运行 <font color=red>objdump -G obj/kern/kernel</font>\
+-G， --stabs   Display (in raw form) any STABS info in the file
+
+![]()
+
++ 运行 <font color=red>gcc -pipe -nostdinc -O2 -fno-builtin -I. -MD -Wall -Wno-format -DJOS_KERNEL -gstabs -c -S kern/init.c</font>，并查看 init.s
