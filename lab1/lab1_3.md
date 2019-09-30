@@ -117,19 +117,107 @@ relocated:
 ## exercise 11
 添加代码如下：
 ```c
+int
+mon_backtrace(int argc, char **argv, struct Trapframe *tf)
+{
+	// Your code here.
+	int i;
+	uint32_t eip;
+	uint32_t* ebp = (uint32_t*)read_ebp();
+	cprintf("Stack backtrace:\n");
+	while(ebp)
+	{
+		eip = *(ebp + 1);
+		cprintf("  ebp %x  eip %x  args ",ebp,eip);
+		uint32_t* args = ebp+2;
+		for (i=0; i<5;i++)
+		{
+			uint32_t arg = args[i];//parameters
+			cprintf(" %08x",arg);
+		}
+		cprintf("\n");
+		ebp = (uint32_t*) *ebp;
+	}
+	return 0;
+}
 ```
 
 ## exercise 12
 + 在文件 <font color=red>kern/kernel.ld</font> 中查找 \_\_STAB_*
-![]()
+
+![_stab](https://github.com/leliyliu/figure_lib/blob/master/jos/lab1/28.png?raw=true)
 
 + 运行 <font color=red>objdump -h obj/kern/kernel</font>
 
-![]()
+![objdump](https://github.com/leliyliu/figure_lib/blob/master/jos/lab1/29.png?raw=true)
 
 + 运行 <font color=red>objdump -G obj/kern/kernel</font>\
 -G， --stabs   Display (in raw form) any STABS info in the file
 
-![]()
-
 + 运行 <font color=red>gcc -pipe -nostdinc -O2 -fno-builtin -I. -MD -Wall -Wno-format -DJOS_KERNEL -gstabs -c -S kern/init.c</font>，并查看 init.s
+
+[init.s]()的内容可以直接查看到
+
++ 看看 bootloader 是否在内存中加载了符号表，作为加载内核二进制文件的一部分
+
+
+inc/stab.h
+```c
+struct Stab {
+	uint32_t n_strx;	// index into string table of name
+	uint8_t n_type;         // type of symbol
+	uint8_t n_other;        // misc info (usually empty)
+	uint16_t n_desc;        // description field
+	uintptr_t n_value;	// value of symbol
+};
+```
+
+对于stabs和stabn的格式，定义如下：
+> .stabs "string",type,other,desc,value \
+> .stabn type,other,desc,value
+
+查看相关的stab_binsearch函数内容，可以发现，其实际上就是一个查询的作用，找到相应的值
+
+因而，修改相应的程序，如源码所示：
+```c
+	stab_binsearch(stabs,&lline,&rline,	N_SLINE,addr);
+	if(lline<=rline)
+	{
+		info->eip_line = stabs[rline].n_desc;
+	}
+	else 
+		return -1;
+```
+
+```c
+int
+mon_backtrace(int argc, char **argv, struct Trapframe *tf)
+{
+	// Your code here.
+	int i;
+	uint32_t eip;
+	uint32_t* ebp = (uint32_t*)read_ebp();
+	cprintf("Stack backtrace:\n");
+	while(ebp)
+	{
+		eip = *(ebp + 1);
+		cprintf("  ebp %x  eip %x  args ",ebp,eip);
+		uint32_t* args = ebp+2;
+		for (i=0; i<5;i++)
+		{
+			uint32_t arg = args[i];//parameters
+			cprintf(" %08x",arg);
+		}
+		cprintf("\n");
+		struct Eipdebuginfo debug_info;
+		debuginfo_eip(eip,&debug_info);
+		cprintf("\t%s:%d: %.*s+%d\n",debug_info.eip_file,debug_info.eip_line,debug_info.eip_fn_namelen,debug_info.eip_fn_name,eip-debug_info.eip_fn_addr);
+		ebp = (uint32_t*) *ebp;
+	}
+	return 0;
+}
+```
+
+至此，所以lab1的实验作业都已完成
+
+![score](https://github.com/leliyliu/figure_lib/blob/master/jos/lab1/30.png?raw=true)
