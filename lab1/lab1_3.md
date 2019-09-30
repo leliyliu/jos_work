@@ -156,7 +156,7 @@ mon_backtrace(int argc, char **argv, struct Trapframe *tf)
 
 + 运行 <font color=red>gcc -pipe -nostdinc -O2 -fno-builtin -I. -MD -Wall -Wno-format -DJOS_KERNEL -gstabs -c -S kern/init.c</font>，并查看 init.s
 
-[init.s]()的内容可以直接查看到
+[init.s](https://github.com/leliyliu/jos_work/blob/master/lab1/init.s)的内容可以直接查看到
 
 + 看看 bootloader 是否在内存中加载了符号表，作为加载内核二进制文件的一部分
 
