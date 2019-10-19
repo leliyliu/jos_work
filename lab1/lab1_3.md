@@ -221,3 +221,90 @@ mon_backtrace(int argc, char **argv, struct Trapframe *tf)
 至此，所以lab1的实验作业都已完成
 
 ![score](https://github.com/leliyliu/figure_lib/blob/master/jos/lab1/30.png?raw=true)
+
+## challenge
+关于最终的挑战，实际上只是修改颜色的话，可以看到在\kern\console.c 的cga_putc函数中，有一行注释为:
+
+![comment](https://github.com/leliyliu/figure_lib/blob/master/jos/lab1/40.png?raw=true)
+
+因此，可以发现，实际上对于颜色的修改就是对于cga_putc函数中的参数c进行相应的修改。一个字符的打印过程为：cprintf→vcprintf
+→vprintfmt→putch→cputchar→consputc→cgaputc
+
+在参数c中，高8位是指定打印的颜色，在源代码中，指定为白底黑字，高八位为0x07，其整体架构为：
+
+![table](https://github.com/leliyliu/figure_lib/blob/master/jos/lab1/table.jpg?raw=true)
+
+因而，可以修改相应的函数，实现不同的颜色表示：
+```c
+// \kern\console.c
+static void
+cga_putc(int c)
+{
+	// if no attribute given, then use black on white
+	c |= init_color<<8;
+	
+	if (!(c & ~0xFF))
+		c|= 0x0100;
+```
+
+```c
+// \lib\printfmt.c
+#define color_green 0x02;
+#define color_blue 0x03;
+#define color_red 0x04;
+#define color_purple 0x06;
+#define color_white 0x07;
+#define color_orange 0x0c;
+
+int init_color = color_green;//设置初始化颜色为绿色
+
+//vprintfmt 函数的设置
+		case 'm':
+			//memmove(selection ,fmt ,sizeof(char ));
+			//selection[1] = '\0';
+			if(fmt[0] == 'g') 
+				init_color = color_green;
+			if(fmt[0] == 'b') 
+				init_color = color_blue;
+			if(fmt[0] == 'r') 
+				init_color = color_red;
+			if(fmt[0] == 'p') 
+				init_color = color_purple;
+			if(fmt[0] == 'w') 
+				init_color = color_white;
+			if(fmt[0] == 'o') 
+				init_color = color_orange;
+			fmt++;
+			break;
+
+```
+
+```c
+// \kern\monitor.c
+//在monitor函数中增加相应的内容
+void
+monitor(struct Trapframe *tf)
+{
+	char *buf;
+
+	cprintf("Welcome to the JOS kernel monitor!\n");
+	cprintf("Type 'help' for a list of commands.\n");
+	cprintf("%mgCan you see my color?\n");
+	cprintf("%mwYes , I can!\n");
+	cprintf("%mrSo what is my color?\n");
+	cprintf("%mpOh , you are red.\n");
+	cprintf("%moI think I am the best.\n");
+	cprintf("%mbI think I am better than you. \n");
+	
+	while (1) {
+		buf = readline("K> ");
+		if (buf != NULL)
+			if (runcmd(buf, tf) < 0)
+				break;
+	}
+}
+```
+
+最终打印的结果为:
+
+![final_result](https://github.com/leliyliu/figure_lib/blob/master/jos/lab1/color.png?raw=true)
