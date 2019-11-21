@@ -1,0 +1,34 @@
++ ld obj/kern/kernel
++ mk obj/kern/kernel.img
+6828 decimal is 15254 octal!
+Physical memory: 131072K available, base = 640K, extended = 130432K
+boot_alloc, nextfree:f0173000
+kern_pgdir:f0173000, npages:32768
+boot_alloc, nextfree:f0174000
+boot_alloc, nextfree:f01b4000
+boot_alloc, nextfree:f01cc000
+kern end page:460
+boot_alloc, nextfree:f01cc000
+check_page_free_list() succeeded!
+check_page_alloc() succeeded!
+check_page() succeeded!
+pages map va:ef000000, pa:174000
+boot_map_region va:ef000000, pa:174000, size:4194304, pages:1024
+boot_map_region va:eec00000, pa:1b4000, size:4194304, pages:1024
+bootstack map va:efff8000, pa:111000
+boot_map_region va:efff8000, pa:111000, size:32768, pages:8
+boot_map_region va:f0000000, pa:0, size:268435456, pages:65536
+check_kern_pgdir() succeeded!
+boot_alloc, nextfree:f01cc000
+check_page_free_list() succeeded!
+check_page_installed_pgdir() succeeded!
+[00000000] new env 00001000
+Incoming TRAP frame at 0xefffffbc
+Incoming TRAP frame at 0xefffffbc
+check va:f010000c, len:64, begin:f0100000, end:f0101000
+[00001000] user_mem_check assertion failure for va f010000c
+[00001000] free env 00001000
+Destroyed the only environment - nothing more to do!
+Welcome to the JOS kernel monitor!
+Type 'help' for a list of commands.
+qemu: terminating on signal 15 from pid 17610
